@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pro Cricket Scorer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --sidebar-bg: #1a237e; --body-bg: #f2f4f8; --squad-green: #00b33c; --btn-blue: #2962ff; --btn-red: #d50000; --btn-dark: #263238; --btn-orange: #ff9800; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--body-bg); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+        /* OVERLAY MODE */
+        body.overlay-mode #login-container, body.overlay-mode #menu-container, body.overlay-mode #main-app, body.overlay-mode #welcomeWizardModal { display: none !important; }
+        body.overlay-mode #obs-container { display: flex !important; } body.overlay-mode { background: transparent; }
+
+        /* HIDE APP INITIALLY */
+        #main-app { display: none; flex-direction: column; width: 100%; height: 100%; }
+        
+        /* NAVBAR */
+        .navbar { width: 100%; height: 60px; background: var(--sidebar-bg); display: flex; align-items: center; padding: 0 10px; color: white; flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 100; }
+        .app-logo { font-weight: bold; font-size: 18px; margin-right: 20px; display: flex; align-items: center; gap: 10px; color: #ffeb3b; white-space: nowrap; }
+        .nav-items-container { display: flex; flex: 1; height: 100%; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; cursor: pointer; opacity: 0.8; transition: 0.3s; border-bottom: 4px solid transparent; }
+        .nav-item:hover, .nav-item.active { opacity: 1; background: rgba(255, 255, 255, 0.1); border-bottom: 4px solid #ffeb3b; }
+        .nav-item i { font-size: 16px; margin-bottom: 2px; } .nav-item span { font-size: 11px; font-weight: bold; text-transform: uppercase; white-space: nowrap; }
+        .logout-btn { margin-left: 20px; color: #ff5252; opacity: 1; cursor: pointer; white-space: nowrap; font-weight: bold; }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 20px; width: 100%; position: relative; }
+        .view-section { display: none; height: 100%; } .view-section.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* DASHBOARD LAYOUT */
+        .top-match-block { background: white; border-radius: 10px; padding: 15px 25px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 50px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid var(--sidebar-bg); }
+        .tm-container { display: flex; align-items: center; gap: 15px; width: auto; min-width: 200px; }
+        .tm-container.right { justify-content: flex-end; text-align: right; flex-direction: row-reverse; }
+        .tm-logo-circle { width: 60px; height: 60px; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #999; overflow: hidden; border: 2px solid #eee; }
+        .tm-logo-circle img { width: 100%; height: 100%; object-fit: cover; }
+        .tm-details { display: flex; flex-direction: column; }
+        .tm-name { font-size: 20px; font-weight: 900; text-transform: uppercase; color: #333; line-height: 1.2; }
+        .tm-score-row { display: flex; align-items: baseline; gap: 10px; margin-top: 2px; }
+        .tm-container.right .tm-score-row { justify-content: flex-end; }
+        .tm-score { font-size: 28px; font-weight: 900; color: var(--btn-blue); line-height: 1; }
+        .tm-meta { display: flex; flex-direction: column; justify-content: center; }
+        .tm-overs { font-size: 14px; font-weight: bold; color: #555; }
+        .tm-crr { font-size: 11px; font-weight: bold; color: #888; margin-top: -2px; }
+        .vs-circle { background: #eee; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #888; flex-shrink: 0; }
+
+        .section-split { display: flex; gap: 15px; margin-bottom: 15px; } .batting-block { flex: 2; display: flex; flex-direction: column; } .bowling-block { flex: 1; display: flex; flex-direction: column; }
+        .sb-header { background: var(--sidebar-bg); color: white; padding: 10px; border-radius: 8px 8px 0 0; text-align: center; font-weight: bold; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+        .card-body { background: white; padding: 15px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); height: 100%; overflow: visible; }
+        .dashboard-grid { display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 15px; height: calc(100% - 350px); min-height: 350px; }
+        .panel-box { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); height: 100%; display: flex; flex-direction: column; }
+        
+        .active-players-strip { display: flex; gap: 15px; align-items: center; }
+        .bat-card, .bowler-strip-card { flex: 1; background: #f8f9fa; border: 1px solid #ddd; border-radius: 10px; padding: 10px 15px; display: flex; align-items: center; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .bat-avatar, .p-avatar { width: 55px; height: 55px; background: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #555; border: 2px solid #1a237e; margin-right: 15px; overflow: hidden; }
+        .bat-avatar img, .p-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .bat-info, .p-info-col { display: flex; flex-direction: column; justify-content: center; min-width: 80px; }
+        .bat-name, .p-name { font-size: 16px; font-weight: 900; text-transform: uppercase; color: #222; margin: 0; line-height: 1.1; }
+        .bat-score, .p-score { font-size: 20px; font-weight: bold; color: var(--btn-blue); margin-top: 3px; }
+        .bat-stats, .p-details-right { margin-left: auto; text-align: right; margin-right: 35px; display: flex; flex-direction: column; gap: 2px; }
+        .bat-stats-row, .p-sub-stats { font-size: 13px; color: #444; font-weight: 600; } .bat-stats-row b, .p-sub-stats b { color: #000; }
+        .bat-show-btn { position: absolute; bottom: 5px; right: 5px; background: #37474f; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; } .bat-show-btn:hover { background: #1a237e; }
+        .swap-circle { width: 40px; height: 40px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; color: var(--btn-blue); }
+        .partnership-box { margin-top: 15px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .part-title { font-weight: 900; color: #1a237e; font-size: 14px; margin-right: 15px; } .part-stats { font-size: 14px; font-weight: bold; color: #444; }
+        .part-show-btn { margin-left: 10px; background: #37474f; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+        .this-over-display { margin-top: 10px; text-align: center; font-size: 14px; font-weight: bold; color: var(--btn-blue); background: #e8eaf6; padding: 6px; border-radius: 6px; border: 1px solid #c5cae9; text-transform: uppercase; }
+        .ball-circles-container { display: flex; gap: 5px; justify-content: center; margin-top: 5px; }
+        .ball-circle { width: 25px; height: 25px; border-radius: 50%; background: #fff; border: 1px solid #999; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #333; }
+        .ball-4 { background: #4caf50; color: white; border: none; } .ball-6 { background: #673ab7; color: white; border: none; } .ball-w { background: #f44336; color: white; border: none; }
+
+        .squad-header { background: var(--sidebar-bg); color: white; padding: 10px; border-radius: 8px 8px 0 0; text-align: center; font-weight: bold; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0; }
+        .squad-body { background: white; padding: 15px; border-radius: 0 0 8px 8px; height: 100%; overflow-y: auto; }
+        .squad-container { display: flex; gap: 10px; } .team-col { flex: 1; }
+        .team-name-label { font-weight: 900; text-transform: uppercase; color: var(--sidebar-bg); font-size: 13px; display: block; margin-bottom: 8px; letter-spacing: 0.5px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .player-card-item { background: #fff; border: 1px solid #ddd; border-left: 4px solid var(--squad-green); padding: 8px 10px; margin-bottom: 6px; border-radius: 4px; display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #333; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
+        .sq-avatar-small { width: 30px; height: 30px; border-radius: 50%; background: #eee; margin-right: 10px; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999; border: 1px solid #ccc; overflow:hidden;}
+        .sq-avatar-small img { width:100%; height:100%; object-fit:cover; }
+        .sq-info { flex: 1; display: flex; flex-direction: column; } .sq-role { font-size: 10px; color: #777; font-weight: normal; }
+        .sq-dots { cursor: pointer; color: #999; padding: 5px; margin-left: auto; } .sq-dots:hover { color: #333; }
+
+        /* THEMED POPUPS */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 6000; } .modal-box { background: white; padding: 25px; width: 400px; border-radius: 10px; text-align: center; } .full-select { width: 100%; padding: 8px; margin: 10px 0; } .modal-btn { padding: 10px 20px; background: var(--btn-blue); color: white; border: none; border-radius: 4px; cursor: pointer; } .modal-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; } .action-btn { padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; color: white; transition: 0.2s; }
+        
+        /* Updated: Setup Box */
+        .setup-box { width: 800px; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin: 20px auto; border: 1px solid #eee; text-align: left; } 
+        /* SWAPPED: Left is Quick Add, Right is Select */
+        .setup-split { display: flex; gap: 30px; margin-top: 15px; } .setup-left { flex: 1; border-right: 1px solid #ddd; padding-right: 20px; } .setup-right { flex: 1; padding-left: 10px; } 
+        .added-teams-list { height: 120px; overflow-y: auto; border: 1px solid #eee; margin-top: 10px; padding: 5px; background: #f9f9f9; } .team-chip { background: #e3f2fd; padding: 5px; margin-bottom: 5px; font-size: 12px; border-radius: 3px; border: 1px solid #bbdefb; }
+        
+        /* UPDATED TOURNAMENT SECTION STYLES */
+        .tour-info-card { background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); overflow: hidden; max-width: 700px; margin: 20px auto; border: 1px solid #eee; }
+        .tour-header { background: #f8f9fa; padding: 20px; font-weight: 800; color: #333; border-bottom: 1px solid #eee; font-size: 18px; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
+        .tour-body { padding: 40px; }
+        .current-tour-display { text-align: center; margin-bottom: 30px; }
+        .current-tour-label { display: block; color: #888; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px; }
+        .current-tour-name { color: var(--sidebar-bg); margin: 0; font-size: 32px; font-weight: 900; line-height: 1.2; }
+        .update-form-section { background: #f9f9f9; padding: 20px; border-radius: 10px; border: 1px solid #eee; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .update-btn { width: auto; background: var(--btn-blue); color: white; padding: 12px 30px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; font-size: 14px; }
+        .update-btn:hover { background: #1565c0; }
+        .clear-btn { width: 100%; background: #fff; color: #666; border: 1px solid #ccc; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .clear-btn:hover { background: #eee; color: #333; }
+        .form-input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; transition: 0.3s; }
+        .form-input:focus { border-color: var(--btn-blue); box-shadow: 0 0 0 3px rgba(41, 98, 255, 0.1); }
+        .add-team-btn { width: 48%; padding: 15px; background: #4caf50; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .add-team-btn:hover { background: #388e3c; }
+
+        .item-bound { color: #ffeb3b !important; font-weight: bold; } .item-wicket { color: #ff5252 !important; font-weight: bold; }
+        .undo-btn { background: #546e7a; color: white; padding: 8px 15px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; margin-right: 5px; } .undo-btn:hover { background: #455a64; }
+        
+        /* HOTKEYS VIEW STYLE */
+        .hotkey-view-card { max-width: 600px; margin: 30px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .key-row { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; align-items: center; } 
+        .key-badge { background: #eee; padding: 5px 12px; border-radius: 6px; font-weight: bold; font-family: monospace; font-size: 16px; border: 1px solid #ccc; color: #333; box-shadow: 0 2px 0 #bbb; }
+        .chart-container { width: 100%; height: 300px; background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        .team-detail-box { width: 850px; max-height: 85vh; background: #fff; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.2); } .td-header { background: linear-gradient(135deg, #1a237e, #283593); padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; color: white; } .td-title { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; } .back-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: 0.3s; } .back-btn:hover { background: rgba(255,255,255,0.4); } .td-body { display: flex; flex: 1; padding: 25px; gap: 30px; background: #f4f6f9; overflow: hidden; } .td-left { flex: 1.5; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; border: 1px solid #eee; overflow-y:auto; } .td-right { flex: 1; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; border: 1px solid #eee; align-items: center; justify-content: center; } .logo-section { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #e0e0e0; border-radius: 10px; padding: 30px; margin-bottom: 20px; position: relative; background: #fafafa; } .logo-preview { width: 140px; height: 140px; object-fit: contain; } .shield-icon { font-size: 80px; color: #ccc; } .info-group { width: 100%; margin-bottom: 15px; } .info-label { font-size: 12px; font-weight: bold; color: #555; display: block; margin-bottom: 5px; } .info-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; } .modal-btn { width: 100%; padding: 12px; background: var(--btn-blue); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px; } .modal-btn:hover { background: #1565c0; } .delete-tm-btn { background: #ffebee; color: var(--btn-red); border: 1px solid var(--btn-red); padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: auto; } .delete-tm-btn:hover { background: var(--btn-red); color: white; }
+
+        .squad-action-grid { display: grid; grid-template-columns: 1fr; gap: 8px; } .sq-act-btn { padding: 12px; border: 1px solid #eee; background: white; border-radius: 5px; cursor: pointer; text-align: left; font-size: 14px; color: #333; transition: 0.2s; display:flex; align-items:center; } .sq-act-btn:hover { background: #e3f2fd; color: var(--btn-blue); border-color: var(--btn-blue); } .sq-act-btn i { width: 25px; text-align: center; margin-right: 10px; color: #555; }
+
+        /* Contact Card */
+        .contact-card { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 500px; margin: 50px auto; border-top: 5px solid var(--sidebar-bg); } .contact-title { font-size: 24px; font-weight: bold; color: var(--sidebar-bg); margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; } .contact-info p { font-size: 16px; color: #333; margin: 12px 0; font-weight: 500; display: flex; align-items: center; justify-content: center; } .contact-info i { margin-right: 15px; color: var(--btn-orange); font-size: 20px; width: 25px; }
+
+        /* Utils & Modals (Minified) */
+        .run-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+        .score-dropdown { position: relative; width: 100%; } .sc-btn { width: 100%; padding: 15px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; font-size: 18px; background: var(--btn-blue); } .sc-btn:hover { background: #1565c0; } .btn-zero { background: #546e7a; } .btn-zero:hover { background: #37474f; }
+        .dropdown-content { display: none; position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); background-color: #263238; min-width: 160px; box-shadow: 0 8px 16px rgba(0,0,0,0.3); z-index: 9999; border-radius: 6px; padding: 5px 0; border: 1px solid #455a64; } .score-dropdown:hover .dropdown-content { display: block; } .dropdown-content::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #263238 transparent transparent transparent; }
+        .drop-item { width: 100%; padding: 10px 15px; text-align: left; border: none; background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; border-bottom: 1px solid #37474f; color: #fff; display: block; transition: 0.2s; } .drop-item:hover { background-color: #37474f; color: #4fc3f7; }
+        .wk-btn { background: var(--btn-red); width: 100%; padding: 15px; color: white; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-top: 5px; } .reset-btn { background: #263238; width: 100%; padding: 10px; color: white; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-top: 5px; font-size: 12px; } .next-inn-btn { width: 100%; padding: 15px; background: var(--btn-orange); color: white; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; display: none; animation: popIn 0.3s; }
+        .extra-buttons { display: flex; gap: 5px; margin-bottom: 10px; } .ex-btn { flex: 1; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 11px; color: white; background: #78909c; }
+        .three-dots { position: absolute; top: 5px; right: 5px; cursor: pointer; color: #999; z-index: 10; } .three-dots:hover { color: #333; }
+        .options-menu { display: none; position: absolute; top: 25px; right: 0; background: white; border: 1px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.15); border-radius: 4px; width: 140px; z-index: 1000; text-align: left; } .opt-item { padding: 8px 12px; font-size: 12px; color: #333; border-bottom: 1px solid #eee; cursor: pointer; } .opt-item:hover { background: #f5f5f5; color: var(--btn-blue); }
+        .add-player-row { display: flex; gap: 5px; margin-bottom: 10px; } .add-player-row input { flex: 1; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; } .add-btn { background: var(--btn-blue); color: white; border: none; padding: 6px 12px; font-size: 12px; cursor: pointer; border-radius: 4px; }
+        .match-list-container { padding: 10px; } .match-section-title { font-weight: bold; color: var(--sidebar-bg); border-bottom: 2px solid #eee; padding-bottom: 5px; margin: 20px 0 10px 0; } .match-card-row { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-left: 5px solid var(--btn-blue); } .mc-status { font-size: 12px; padding: 3px 8px; border-radius: 4px; color: white; font-weight: bold; } .status-live { background: #28a745; } .status-done { background: #757575; } .create-match-btn { background: var(--btn-orange); color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; float: right; }
+        .teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 10px; } .team-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; display: flex; align-items: center; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); } .team-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: var(--btn-blue); } .team-icon { font-size: 32px; color: #bdbdbd; margin-right: 15px; } .team-info-text h3 { margin: 0; color: var(--btn-blue); font-size: 16px; font-weight: 800; text-transform: uppercase; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 6000; } .modal-box { background: white; padding: 25px; width: 400px; border-radius: 10px; text-align: center; } .full-select { width: 100%; padding: 8px; margin: 10px 0; }
+        .obs-card { width: 700px; background: transparent; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); } .obs-header { background: linear-gradient(90deg, #0d47a1, #1976d2); color: white; padding: 10px 25px; display: flex; justify-content: space-between; align-items: center; height: 60px; } .obs-body { background: white; display: grid; grid-template-columns: repeat(5, 1fr); text-align: center; } .obs-val { background: #1565c0; color: white; font-size: 22px; font-weight: 800; padding: 8px 0; border-right: 1px solid #0d47a1; }
+    </style>
+</head>
+<body>
+
+    <div id="obs-container" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">
+        <div class="obs-card">
+            <div class="obs-header"><div class="obs-name" id="obs-p-name">PLAYER</div><div style="display:flex;align-items:center;"><div class="obs-current" id="obs-p-score">0 (0)</div></div></div>
+            <div class="obs-body">
+                <div style="display:flex;flex-direction:column;"><div id="obs-lbl-1" style="background:#e0e0e0;color:#1a237e;font-weight:800;padding:8px;">Runs</div><div class="obs-val" id="obs-val-1">0</div></div>
+                <div style="display:flex;flex-direction:column;"><div id="obs-lbl-2" style="background:#e0e0e0;color:#1a237e;font-weight:800;padding:8px;">Balls</div><div class="obs-val" id="obs-val-2">0</div></div>
+                <div style="display:flex;flex-direction:column;"><div id="obs-lbl-3" style="background:#e0e0e0;color:#1a237e;font-weight:800;padding:8px;">4's</div><div class="obs-val" id="obs-val-3">0</div></div>
+                <div style="display:flex;flex-direction:column;"><div id="obs-lbl-4" style="background:#e0e0e0;color:#1a237e;font-weight:800;padding:8px;">6's</div><div class="obs-val" id="obs-val-4">0</div></div>
+                <div style="display:flex;flex-direction:column;"><div id="obs-lbl-5" style="background:#e0e0e0;color:#1a237e;font-weight:800;padding:8px;">SR</div><div class="obs-val" id="obs-val-5">0.00</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app">
+        <div class="navbar">
+            <div class="app-logo"><i class="fas fa-baseball-ball"></i> PRO SCORER</div>
+            <div class="nav-items-container">
+                <div id="nav-scoring" class="nav-item" style="display:none;" onclick="switchView('dashboard', this)"><i class="fas fa-tachometer-alt"></i><span>Scoring Window</span></div>
+                <div class="nav-item active" onclick="switchView('tournament', this)"><i class="fas fa-trophy"></i><span>Tournament</span></div>
+                <div class="nav-item" onclick="switchView('setup', this)"><i class="fas fa-cog"></i><span>Match Setup</span></div>
+                <div class="nav-item" onclick="switchView('teams', this)"><i class="fas fa-users"></i><span>Teams</span></div>
+                <div class="nav-item" onclick="switchView('matches', this)"><i class="fas fa-table-list"></i><span>Matches</span></div>
+                <div class="nav-item" onclick="switchView('stats', this)"><i class="fas fa-chart-bar"></i><span>Stats</span></div>
+                <div class="nav-item" onclick="openHotkeys()"><i class="fas fa-keyboard"></i><span>Hotkeys</span></div>
+                <div class="nav-item" onclick="switchView('contact', this)"><i class="fas fa-address-book"></i><span>Contact</span></div>
+            </div>
+            <div class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Exit</div>
+        </div>
+
+        <div class="main-content">
+            
+            <div id="view-tournament" class="view-section active">
+                <div class="tour-info-card">
+                    <div class="tour-header">Tournament Dashboard</div>
+                    <div class="tour-body">
+                        
+                        <div class="current-tour-display">
+                            <span class="current-tour-label">Welcome to</span>
+                            <h1 id="display-tour-name" class="current-tour-name">Pro Cricket Scorer</h1>
+                        </div>
+
+                        <hr style="border:0; border-top:1px solid #eee; margin: 30px 0;">
+
+                        <div class="update-form-section">
+                            <button class="update-btn" onclick="openUpdateTourName()">UPDATE TOURNAMENT NAME</button>
+                        </div>
+
+                        <div style="margin-top:30px; display:flex; gap:20px; justify-content:center;">
+                            <button class="add-team-btn" onclick="goToTeamsSection()"><i class="fas fa-users"></i> Go to Team</button>
+                            <button class="add-team-btn" style="background:var(--btn-orange);" onclick="goToMatchSetup()"><i class="fas fa-cog"></i> Match Setup</button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-teams" class="view-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2>Teams List</h2>
+                    <button class="create-match-btn" style="background:#4caf50;" onclick="openAddTeamModal()">+ Add New Team</button>
+                </div>
+                <div class="teams-grid" id="teams-grid-container"></div>
+            </div>
+
+            <div id="view-setup" class="view-section">
+                <div class="setup-box">
+                    <h2 style="color:var(--sidebar-bg); margin-top:0;">Match Setup</h2>
+                    <div style="text-align:center; margin-bottom:15px;">
+                        <label>Tournament Name</label>
+                        <input id="tourNameInput" class="full-select" style="text-align:center; font-weight:bold; color:#1a237e;" readonly value="Pro Cricket Scorer">
+                    </div>
+                    <div class="setup-split">
+                        <div class="setup-left">
+                             <h4>Quick Add Team</h4>
+                            <input id="poolTeamName" class="full-select" placeholder="Team Name">
+                            <textarea id="poolTeamSquad" class="full-select" placeholder="Players" style="height:60px;"></textarea>
+                            <button onclick="addTeamToPool()" class="modal-btn">+ Add Team</button>
+                            <div class="added-teams-list" id="poolList"></div>
+                        </div>
+                        <div class="setup-right">
+                           <h4>Select Teams</h4>
+                            <label>Team A</label><select id="selectTeamA" class="full-select" onchange="updateDropdowns()"></select>
+                            <label>Team B</label><select id="selectTeamB" class="full-select"></select>
+                            <label>Overs</label><input type="number" id="matchOvers" class="full-select" value="5">
+                            <button onclick="finishSetup()" class="modal-btn" style="width:100%; margin-top:10px;">START MATCH</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-hotkeys" class="view-section">
+                <div class="hotkey-view-card">
+                    <h3 style="color:var(--sidebar-bg); border-bottom:2px solid #eee; padding-bottom:10px;">Keyboard Shortcuts</h3>
+                    <div class="key-row"><span>Dot Ball</span><span class="key-badge">0</span></div>
+                    <div class="key-row"><span>1 Run</span><span class="key-badge">1</span></div>
+                    <div class="key-row"><span>Boundary</span><span class="key-badge">4</span></div>
+                    <div class="key-row"><span>Six</span><span class="key-badge">6</span></div>
+                    <div class="key-row"><span>Wicket</span><span class="key-badge">W</span></div>
+                    <div class="key-row"><span>Wide</span><span class="key-badge">I</span></div>
+                    <div class="key-row"><span>No Ball</span><span class="key-badge">N</span></div>
+                    <div class="key-row"><span>Swap Strike</span><span class="key-badge">S</span></div>
+                </div>
+            </div>
+
+            <div id="view-dashboard" class="view-section">
+                <div class="top-match-block"><div class="tm-container"><div class="tm-logo-circle"><img id="tm1-logo" src="" style="display:none;"><i id="tm1-icon" class="fas fa-shield-alt"></i></div><div class="tm-details"><div class="tm-name" id="team1-disp">TEAM A</div><div class="tm-score-row"><div class="tm-score" id="score-t1">0/0</div><div class="tm-meta"><span class="tm-overs" id="overs-t1">0.0</span><span class="tm-crr">CRR: <span id="crr-t1">0.00</span></span></div></div></div></div><div class="vs-circle">VS</div><div class="tm-container right"><div class="tm-logo-circle"><img id="tm2-logo" src="" style="display:none;"><i id="tm2-icon" class="fas fa-shield-alt"></i></div><div class="tm-details"><div class="tm-name" id="team2-disp">TEAM B</div><div class="tm-score-row"><div class="tm-score" id="score-t2">0/0</div><div class="tm-meta"><span class="tm-overs" id="overs-t2">0.0</span><span class="tm-crr"><span id="crr-t2"></span></span></div></div></div></div></div>
+                <div class="section-split">
+                    <div class="batting-block"><div class="sb-header">BATTING</div><div class="card-body">
+                        <div class="active-players-strip">
+                            <div class="bat-card"><div class="bat-avatar"><i class="fas fa-user-graduate"></i></div><div class="bat-info"><div class="bat-name" id="p1-name">STRIKER</div><div class="bat-score" id="p1-stats">0(0)</div></div><div class="bat-stats"><div class="p-details-right"><div class="p-sub-stats" id="p1-details">4s:<b>0</b> 6s:<b>0</b></div><div class="p-sub-stats">SR: <b>0.00</b></div></div></div><div class="three-dots" onclick="toggleMenu('menu-p1')">⋮</div><div id="menu-p1" class="options-menu"><div class="opt-item" onclick="actionChangePlayer('striker')">Change Batsman</div><div class="opt-item" onclick="actionRetireHurt('striker')">Retired Hurt</div><div class="opt-item" onclick="actionEditPlayer('striker')">Edit Player</div></div><button class="bat-show-btn" onclick="openOverlay('striker')">Show 👁️</button></div>
+                            <div class="swap-circle" onclick="swapStrike()"><i class="fas fa-exchange-alt"></i></div>
+                            <div class="bat-card"><div class="bat-avatar"><i class="fas fa-user"></i></div><div class="bat-info"><div class="bat-name" id="p2-name">NON STRIKER</div><div class="bat-score" id="p2-stats">0(0)</div></div><div class="bat-stats"><div class="p-details-right"><div class="p-sub-stats" id="p2-details">4s:<b>0</b> 6s:<b>0</b></div><div class="p-sub-stats">SR: <b>0.00</b></div></div></div><div class="three-dots" onclick="toggleMenu('menu-p2')">⋮</div><div id="menu-p2" class="options-menu"><div class="opt-item" onclick="actionChangePlayer('nonStriker')">Change Batsman</div><div class="opt-item" onclick="actionRetireHurt('nonStriker')">Retired Hurt</div><div class="opt-item" onclick="actionEditPlayer('nonStriker')">Edit Player</div></div><button class="bat-show-btn" onclick="openOverlay('nonStriker')">Show 👁️</button></div>
+                        </div>
+                        <div class="partnership-box"><span class="part-title">PARTNERSHIP</span><span class="part-stats"><span id="part-runs">0</span> Runs (<span id="part-balls">0</span> Balls)</span><button class="part-show-btn" onclick="openOverlay('partnership')">Show 👁️</button></div>
+                    </div></div>
+                    <div class="bowling-block"><div class="sb-header">BOWLING</div><div class="card-body">
+                        <div class="bowler-strip-card">
+                            <div class="p-avatar" style="background:#d50000;color:white;"><i class="fas fa-baseball-ball"></i></div>
+                            <div class="p-info-col"><h4 id="bwl-name" class="p-name">BOWLER</h4><span id="bwl-stats" class="p-score">0-0 (0.0)</span></div>
+                            <div class="p-details-right"><div class="p-sub-stats" id="bwl-details">Econ: <b>0.00</b></div><div class="p-sub-stats">Dots: <b id="bwl-dots">0</b> | Ext: <b id="bwl-extra">0</b></div></div>
+                            <div class="three-dots" onclick="toggleMenu('menu-bwl')">⋮</div><div id="menu-bwl" class="options-menu"><div class="opt-item" onclick="actionChangePlayer('bowler')">Change Bowler</div><div class="opt-item" onclick="actionEditPlayer('bowler')">Edit Player</div></div>
+                            <button class="bat-show-btn" onclick="openOverlay('bowler')">Show 👁️</button>
+                        </div>
+                        <div class="this-over-display">THIS OVER: <span id="this-over"></span><div id="ball-circles" class="ball-circles-container"></div></div>
+                    </div></div>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="panel-box" style="padding:0; overflow:hidden;">
+                        <div class="squad-header">Squads</div>
+                        <div class="squad-body">
+                            <div class="squad-container">
+                                <div class="team-col"><div id="t1-head" class="team-name-label">Team A</div><div class="add-player-row"><input type="text" id="new-p1" placeholder="Add"><button class="add-btn" onclick="addNewPlayer(1)">+</button></div><ul id="squad-list-1" style="padding:0; list-style:none;"></ul></div>
+                                <div class="team-col"><div id="t2-head" class="team-name-label">Team B</div><div class="add-player-row"><input type="text" id="new-p2" placeholder="Add"><button class="add-btn" onclick="addNewPlayer(2)">+</button></div><ul id="squad-list-2" style="padding:0; list-style:none;"></ul></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="scoring-section"><div class="sb-header">SCOREBOARD</div><div class="card-body">
+                        <div class="run-buttons"><div class="score-dropdown"><button class="sc-btn btn-zero">0</button><div class="dropdown-content"><button class="drop-item" onclick="updateScore(0, false, '')">🏏 Dot Ball</button><button class="drop-item" onclick="updateScore(0, false, 'B')">⚾ Bye</button><button class="drop-item" onclick="updateScore(0, false, 'LB')">🦵 Leg Bye</button></div></div><div class="score-dropdown"><button class="sc-btn" onclick="updateScore(1, false, '')">1</button><div class="dropdown-content"><button class="drop-item" onclick="updateScore(1, false, '')">1 Bat run</button><button class="drop-item" onclick="updateScore(1, false, 'WD')">Wide + 1</button><button class="drop-item" onclick="updateScore(1, false, 'NB')">NB + 1</button><button class="drop-item" onclick="updateScore(1, false, 'B')">Bye + 1</button><button class="drop-item" onclick="updateScore(1, false, 'LB')">LB + 1</button></div></div><div class="score-dropdown"><button class="sc-btn" onclick="updateScore(2, false, '')">2</button><div class="dropdown-content"><button class="drop-item" onclick="updateScore(2, false, '')">2 Bat runs</button><button class="drop-item" onclick="updateScore(2, false, 'WD')">Wide + 2</button><button class="drop-item" onclick="updateScore(2, false, 'NB')">NB + 2</button><button class="drop-item" onclick="updateScore(2, false, 'B')">Bye + 2</button><button class="drop-item" onclick="updateScore(2, false, 'LB')">LB + 2</button></div></div><div class="score-dropdown"><button class="sc-btn" onclick="updateScore(3, false, '')">3</button><div class="dropdown-content"><button class="drop-item" onclick="updateScore(3, false, '')">3 Bat runs</button><button class="drop-item" onclick="updateScore(3, false, 'WD')">Wide + 3</button><button class="drop-item" onclick="updateScore(3, false, 'NB')">NB + 3</button><button class="drop-item" onclick="updateScore(3, false, 'B')">Bye + 3</button><button class="drop-item" onclick="updateScore(3, false, 'LB')">LB + 3</button></div></div><div class="score-dropdown"><button class="sc-btn" onclick="updateScore(4, true, 'Boundary')">4</button><div class="dropdown-content"><button class="drop-item item-bound" onclick="updateScore(4, true, 'Boundary')">🌟 Boundary</button><button class="drop-item" onclick="updateScore(4, false, '')">Ran 4</button><button class="drop-item" onclick="updateScore(4, false, 'WD')">Wide + 4</button><button class="drop-item" onclick="updateScore(4, false, 'NB')">NB + 4</button><button class="drop-item" onclick="updateScore(4, false, 'B')">Bye + 4</button></div></div><div class="score-dropdown"><button class="sc-btn" onclick="updateScore(5, false, '')">5</button><div class="dropdown-content"><button class="drop-item" onclick="updateScore(5, false, '')">5 Bat runs</button><button class="drop-item" onclick="updateScore(5, false, 'WD')">Wide + 5</button><button class="drop-item" onclick="updateScore(5, false, 'NB')">NB + 5</button></div></div><div class="score-dropdown"><button class="sc-btn" onclick="updateScore(6, true, 'Boundary')">6</button><div class="dropdown-content"><button class="drop-item item-bound" onclick="updateScore(6, true, 'Boundary')">🚀 SIX</button><button class="drop-item" onclick="updateScore(6, false, '')">Ran 6</button><button class="drop-item" onclick="updateScore(6, false, 'WD')">Wide + 6</button><button class="drop-item" onclick="updateScore(6, false, 'NB')">NB + 6</button></div></div><div class="score-dropdown"><button class="sc-btn" onclick="updateScore(7, false, '')">7</button><div class="dropdown-content"><button class="drop-item" onclick="updateScore(7, false, '')">7 Bat runs</button><button class="drop-item" onclick="updateScore(7, false, 'WD')">Wide + 7</button><button class="drop-item" onclick="updateScore(7, false, 'NB')">NB + 7</button></div></div></div>
+                        <div class="extra-buttons" style="margin-top:15px;"><button class="ex-btn" onclick="updateScore(1, false, 'WD')">Wide Ball</button><button class="ex-btn" onclick="updateScore(1, false, 'NB')">No Ball</button><button class="ex-btn" onclick="updateScore(0, false, 'Penalty')">Penalty</button></div>
+                        <div class="score-dropdown" style="width:100%; margin-top:5px;"><button class="wk-btn">WICKET (OUT)</button><div class="dropdown-content"><button class="drop-item item-wicket" onclick="openFielderModal('Bowled')">🔴 Bowled</button><button class="drop-item item-wicket" onclick="openFielderModal('Catch')">🤲 Caught</button><button class="drop-item item-wicket" onclick="openFielderModal('Run Out')">🏃 Run Out</button><button class="drop-item item-wicket" onclick="openFielderModal('LBW')">🦵 LBW</button><button class="drop-item item-wicket" onclick="openFielderModal('Stumped')">🧤 Stumped</button><button class="drop-item item-wicket" onclick="openFielderModal('Hit Wicket')">🏏 Hit Wicket</button></div></div>
+                        <div style="margin-top:10px;display:flex;gap:5px;">
+                            <button class="undo-btn" onclick="undoLast()"><i class="fas fa-undo"></i> Undo</button>
+                            <button id="endInnBtn" class="next-inn-btn" style="flex:1;" onclick="startSecondInnings()">START 2ND INNINGS ➜</button>
+                        </div>
+                        <button class="reset-btn" onclick="confirmReset()">RESET SCORE ⚠️</button>
+                    </div></div>
+                </div>
+            </div>
+            
+            <div id="view-stats" class="view-section"><h2>Stats</h2><div class="chart-container"><canvas id="runRateChart"></canvas></div></div>
+            <div id="view-contact" class="view-section"><div class="contact-card"><div class="contact-title">Contact Us</div><div class="contact-info"><p><i class="fas fa-user"></i> Amol Wanjare</p><p><i class="fas fa-camera"></i> Amol Films & Photos</p><p><i class="fas fa-phone"></i> 7722006622</p><p><i class="fas fa-map-marker-alt"></i> Hinganghat</p></div></div></div>
+            <div id="view-matches" class="view-section"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>Matches</h2><button class="create-match-btn" onclick="openSetupWindow()">+ Create Match</button></div><div class="match-list-container"><div class="match-section-title">Live Match</div><div id="live-match-card"></div><div class="match-section-title">Completed Matches</div><div id="completed-matches-list"></div><div class="match-section-title">Upcoming</div><div id="upcoming-matches-list"><div style="color:#999;font-style:italic;">No upcoming matches.</div></div></div></div>
+        </div>
+    </div>
+
+    <div id="welcomeWizardModal" class="modal-overlay">
+        <div class="modal-box" style="width:450px;">
+            <div id="setup-step-1" class="wizard-step active">
+                <h2 style="color:var(--sidebar-bg);">Welcome Host!</h2>
+                <p>Let's set up your tournament quickly.</p>
+                <label class="wizard-label">Tournament Name</label>
+                <input id="wiz-tour-name" class="full-select" placeholder="Enter Tournament Name">
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="modal-btn" style="flex:1;" onclick="wizardNext(1)">Next ➜</button>
+                    <button class="modal-btn" style="flex:1; background:#90a4ae;" onclick="skipWizard()">Skip Setup</button>
+                </div>
+            </div>
+            
+            <div id="setup-step-2" class="wizard-step">
+                <h2 style="color:var(--sidebar-bg);">Add Teams</h2>
+                <div style="background:#f9f9f9; padding:10px; border-radius:5px; margin-bottom:10px;">
+                    <label class="wizard-label">Team Name</label>
+                    <input id="wiz-team-name" class="full-select" placeholder="e.g. Mumbai Indians">
+                    
+                    <label class="wizard-label">Team Color</label>
+                    <input type="color" id="wiz-team-color" class="full-select" style="height:40px;">
+                    <hr>
+                    
+                    <label class="wizard-label">Add Players (Optional)</label>
+                    <div style="display:flex; gap:5px;">
+                        <input id="wiz-p-name" class="full-select" placeholder="Player Name">
+                        <input id="wiz-p-role" class="full-select" placeholder="Role (Bat/Bowl)">
+                    </div>
+                    <button class="action-btn" style="background:#4caf50; width:100%; margin-top:5px;" onclick="addWizardPlayer()">+ Add Player to List</button>
+                    
+                    <div id="wiz-player-list" class="wizard-players-list"></div>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <button class="modal-btn" onclick="saveWizardTeam()">Save Team</button>
+                </div>
+
+                <div style="margin-top:15px; text-align:right;">
+                    <span id="wiz-team-count" style="font-size:12px; color:#666;">Teams Added: 0</span>
+                    <button id="wiz-finish-btn" class="modal-btn" style="background:var(--btn-orange); display:none;" onclick="finishWizard()">Finish & Go to Match ➜</button>
+                    <button class="modal-btn" style="background:#90a4ae; font-size:12px; margin-top:5px;" onclick="skipWizard()">Skip</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="addTeamModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Add New Team</h3>
+            <input id="new-team-page-name" class="full-select" placeholder="Team Name">
+            <button class="modal-btn" onclick="addNewTeamFromPage()">Add Team</button>
+            <button class="modal-btn" style="background:#777; margin-top:5px;" onclick="document.getElementById('addTeamModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+
+    <div id="squadActionModal" class="modal-overlay">
+        <div class="modal-box" style="width:300px;">
+            <h3>Player Actions</h3>
+            <div class="squad-action-grid">
+                <div class="sq-act-btn" onclick="triggerEdit('name')"><i class="fas fa-pen"></i> Edit Name</div>
+                <div class="sq-act-btn" onclick="triggerEdit('role')"><i class="fas fa-user-tag"></i> Edit Role</div>
+                <div class="sq-act-btn" onclick="triggerEdit('photo')"><i class="fas fa-camera"></i> Update Photo</div>
+                <div class="sq-act-btn" onclick="triggerEdit('delPhoto')"><i class="fas fa-ban"></i> Delete Photo</div>
+                <div class="sq-act-btn" onclick="triggerEdit('delPlayer')" style="color:red;border-color:red;"><i class="fas fa-trash"></i> Delete Player</div>
+            </div>
+            <button onclick="document.getElementById('squadActionModal').style.display='none'" style="margin-top:10px;border:none;background:none;color:#999;">Cancel</button>
+        </div>
+    </div>
+
+    <div id="playerEditModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="edit-modal-title">Edit</h3>
+            <div id="edit-name-container"><input id="edit-p-name" class="full-select" placeholder="Name"></div>
+            <div id="edit-role-container"><input id="edit-p-role" class="full-select" placeholder="Role"></div>
+            <div id="edit-photo-container"><input type="file" id="edit-p-photo" class="full-select" accept="image/*"></div>
+            <button onclick="savePlayerEdit()" class="modal-btn">Save</button>
+            <button onclick="document.getElementById('playerEditModal').style.display='none'" style="margin-top:10px;background:#777;border:none;color:white;padding:5px 10px;border-radius:4px;">Cancel</button>
+        </div>
+    </div>
+
+    <div id="wicketTypeModal" class="modal-overlay">
+        <div class="modal-box" style="border-top: 5px solid var(--btn-red);">
+            <h2>WICKET!</h2>
+            <div id="fielder-select-container" style="display:none;margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:bold;">Select Fielder (Who caught/run-out?):</label>
+                <select id="fielderSelect" class="full-select"></select>
+            </div>
+            <button id="confirmWicketBtn" class="modal-btn" style="background:var(--btn-red);">Confirm</button>
+            <button onclick="closeModal('wicketTypeModal')" style="margin-top:10px;background:#777;color:white;border:none;padding:5px 10px;border-radius:4px;">Cancel</button>
+        </div>
+    </div>
+
+    <div id="hotkeyModal" class="modal-overlay"><div class="modal-box" style="text-align:left;"><h3>Keyboard Shortcuts</h3><div class="key-row"><span>Dot Ball</span><span class="key-badge">0</span></div><div class="key-row"><span>1 Run</span><span class="key-badge">1</span></div><div class="key-row"><span>Boundary</span><span class="key-badge">4</span></div><div class="key-row"><span>Six</span><span class="key-badge">6</span></div><div class="key-row"><span>Wicket</span><span class="key-badge">W</span></div><div class="key-row"><span>Wide</span><span class="key-badge">I</span></div><div class="key-row"><span>No Ball</span><span class="key-badge">N</span></div><div class="key-row"><span>Swap Strike</span><span class="key-badge">S</span></div><button onclick="document.getElementById('hotkeyModal').style.display='none'" class="modal-btn" style="margin-top:10px;">Close</button></div></div>
+    <div id="newBatsmanModal" class="modal-overlay"><div class="modal-box"><h3>New Batsman</h3><select id="newBatSelect" class="full-select"></select><button onclick="confirmNewBatsman()" class="modal-btn">Select</button></div></div>
+    <div id="bowlerModal" class="modal-overlay"><div class="modal-box"><h3>New Bowler</h3><select id="bowlerSelect" class="full-select"></select><button onclick="confirmNewBowler()" class="modal-btn">Select</button></div></div>
+    
+    <div id="teamDetailModal" class="modal-overlay"><div class="team-detail-box"><div class="td-header"><span class="td-title" id="td-modal-title">Team Details</span><button class="back-btn" onclick="closeTeamDetailModal()"><i class="fas fa-arrow-left"></i> Back</button></div><div class="td-body"><div class="td-left"><div class="player-input-row"><input id="new-p-name" class="p-input" placeholder="Player Name"><select id="new-p-role" class="role-select"><option value="Batsman">Batsman</option><option value="Bowler">Bowler</option></select><button class="add-p-btn" onclick="addPlayerToTeam()">Add</button></div><div class="squad-list-header"><span style="width:30px;">#</span><span style="flex:1;">Player Name</span><span>Edit</span></div><div class="squad-scroll" id="td-squad-list"></div></div><div class="td-right"><div class="info-group"><span class="info-label">Name:</span><input id="td-team-name" class="info-input"></div><button class="modal-btn" onclick="updateTeamDetails()">Update</button><div class="logo-section"><img id="td-logo-preview" src="" class="logo-preview" style="display:none;"><i id="td-shield-icon" class="fas fa-shield-alt shield-icon"></i></div><div class="file-row"><input type="file" id="td-logo-input" accept="image/*" style="font-size:12px;"><button class="modal-btn" onclick="uploadTeamLogo()">Upload</button></div><button class="delete-tm-btn" onclick="deleteTeam()">Delete</button></div></div></div></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let currentMatch = {}, pendingRunValue = 0, partnership = { runs: 0, balls: 0 };
+        let availableTeams = [], matchesHistory = [], currentEditIndex = -1;
+        let activeSquadTeamId = 0, activeSquadPlayerIndex = 0, activeEditAction = "";
+        let runRateChart = null;
+
+        // WIZARD VARIABLES
+        let wizardTempPlayers = [];
+        let wizardTeamsAddedCount = 0;
+
+        // TOAST
+        window.alert = function(message) { let t=document.createElement("div"); t.innerText=message; Object.assign(t.style, {position:"fixed", bottom:"30px", left:"50%", transform:"translateX(-50%)", backgroundColor:"#333", color:"#fff", padding:"12px 24px", borderRadius:"50px", boxShadow:"0 4px 10px rgba(0,0,0,0.3)", zIndex:"10000", fontSize:"14px", opacity:"0", transition:"opacity 0.3s"}); document.body.appendChild(t); setTimeout(()=>{t.style.opacity="1"},10); setTimeout(()=>{t.style.opacity="0";setTimeout(()=>{document.body.removeChild(t)},300)},3000); };
+
+        // AUTO LOGIN CHECK - CRITICAL FIX
+        const role = sessionStorage.getItem('role');
+        const username = sessionStorage.getItem('username'); // Get username
+
+        if (role === 'host' && username) {
+            document.getElementById('main-app').style.display = 'flex';
+            // Tell server to rejoin specifically for this user
+            socket.emit('rejoinGame', username); 
+        } else if (!new URLSearchParams(window.location.search).get('overlay')) {
+            window.location.href = 'home.html';
+        }
+
+        // WIZARD LOGIC
+        function checkWelcomeStatus(data) {
+            // If name is already updated (not default), do NOT show wizard
+            if (data.tournamentInfo.name && data.tournamentInfo.name !== "Pro Cricket 2025" && data.tournamentInfo.name !== "New Tournament") {
+                return; 
+            }
+            // If no teams exist, show wizard
+            if (data.allTeams.length === 0) {
+                document.getElementById('welcomeWizardModal').style.display = 'flex';
+            }
+        }
+
+        function wizardNext(step) {
+            if (step === 1) {
+                let tName = document.getElementById('wiz-tour-name').value;
+                if (tName) {
+                    socket.emit('updateTournamentInfo', { ...currentMatch.tournamentInfo, name: tName });
+                    // INSTANT UI UPDATE
+                    document.getElementById('display-tour-name').innerText = tName;
+                    document.getElementById('setup-step-1').classList.remove('active');
+                    document.getElementById('setup-step-2').classList.add('active');
+                } else { alert("Enter Tournament Name"); }
+            }
+        }
+        
+        // NEW SKIP FUNCTION
+        function skipWizard() {
+            if(confirm("Are you sure you want to skip setup? You can add teams later.")) {
+                document.getElementById('welcomeWizardModal').style.display = 'none';
+            }
+        }
+
+        function addWizardPlayer() {
+            let n = document.getElementById('wiz-p-name').value;
+            let r = document.getElementById('wiz-p-role').value;
+            if (n) {
+                wizardTempPlayers.push({ name: n, role: r, photo: "" });
+                updateWizardPlayerList();
+                document.getElementById('wiz-p-name').value = "";
+                document.getElementById('wiz-p-role').value = "";
+            }
+        }
+
+        function updateWizardPlayerList() {
+            let list = document.getElementById('wiz-player-list');
+            list.innerHTML = "";
+            wizardTempPlayers.forEach(p => {
+                list.innerHTML += `<span class="added-p-chip">${p.name}</span>`;
+            });
+        }
+
+        function saveWizardTeam() {
+            let tName = document.getElementById('wiz-team-name').value;
+            let tColor = document.getElementById('wiz-team-color').value; // Saved but not visually used yet
+            
+            if (tName) {
+                // We send array of strings or objects. Keeping it simple objects.
+                let teamObj = { name: tName, color: tColor, players: wizardTempPlayers, logo: "" };
+                socket.emit('addTeamPool', teamObj);
+                
+                wizardTeamsAddedCount++;
+                document.getElementById('wiz-team-count').innerText = `Teams Added: ${wizardTeamsAddedCount}`;
+                
+                // Reset form
+                document.getElementById('wiz-team-name').value = "";
+                wizardTempPlayers = [];
+                updateWizardPlayerList();
+
+                if (wizardTeamsAddedCount >= 2) {
+                    document.getElementById('wiz-finish-btn').style.display = 'inline-block';
+                }
+            } else { alert("Enter Team Name"); }
+        }
+
+        function finishWizard() {
+            document.getElementById('welcomeWizardModal').style.display = 'none';
+            // Switch to Setup
+            let items = document.querySelectorAll('.nav-item');
+            // 'Match Setup' is at index 2 (0:Scoring, 1:Tour, 2:Setup)
+            switchView('setup', items[2]); 
+        }
+
+        // --- NAVIGATION & UI ---
+        function switchView(v, b) { 
+            document.querySelectorAll('.view-section').forEach(e=>e.classList.remove('active')); 
+            document.getElementById('view-'+v).classList.add('active'); 
+            document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active')); 
+            if(b) b.classList.add('active'); 
+            
+            // Explicitly reload grid if switching to teams view
+            if(v==='teams') renderTeamsGrid(); 
+            
+            if(v==='matches') renderMatchesView();
+            if(v==='stats') renderRunRateChart();
+            if(v==='setup') updateDropdowns();
+        }
+        function goToTeamsSection() {
+            let items = document.querySelectorAll('.nav-item');
+            // Assuming Teams is at index 3 (0:Scoring, 1:Tour, 2:Setup, 3:Teams)
+            switchView('teams', items[3]); 
+        }
+        function openSetupWindow() { 
+             // Just switch to the setup view
+             let items = document.querySelectorAll('.nav-item');
+             switchView('setup', items[2]);
+        }
+        function goToMatchSetup() {
+             let items = document.querySelectorAll('.nav-item');
+             switchView('setup', items[2]);
+        }
+        function logout() { sessionStorage.clear(); window.location.href='home.html'; }
+        function openHotkeys() {  
+            let items = document.querySelectorAll('.nav-item');
+            // Hotkeys is at index 6
+            switchView('hotkeys', items[6]);
+        }
+        function openAddTeamModal() { document.getElementById('addTeamModal').style.display='flex'; }
+        function addNewTeamFromPage() {
+            let n = document.getElementById('new-team-page-name').value;
+            if(n) { 
+                socket.emit('addTeamPool', {name:n, players:[], logo:""}); 
+                document.getElementById('addTeamModal').style.display='none'; 
+                document.getElementById('new-team-page-name').value=""; 
+            }
+        }
+        function openUpdateTourName() {
+            let current = document.getElementById('display-tour-name').innerText;
+            let newName = prompt("Enter new Tournament Name:", current);
+            if(newName && newName !== current) {
+                socket.emit('updateTournamentInfo', { ...currentMatch.tournamentInfo, name: newName });
+                document.getElementById('display-tour-name').innerText = newName;
+                alert("Updated!");
+            }
+        }
+
+        // SQUAD ACTIONS
+        function openSquadActions(tid, idx) { activeSquadTeamId = tid; activeSquadPlayerIndex = idx; document.getElementById('squadActionModal').style.display = 'flex'; }
+        function triggerEdit(action) {
+            document.getElementById('squadActionModal').style.display = 'none'; activeEditAction = action;
+            if(action === 'delPlayer') { deleteSquadPlayer(); return; }
+            if(action === 'delPhoto') { updateSquadData('photo', ''); return; }
+            document.getElementById('playerEditModal').style.display = 'flex';
+            document.getElementById('edit-name-container').style.display = (action === 'name') ? 'block' : 'none';
+            document.getElementById('edit-role-container').style.display = (action === 'role') ? 'block' : 'none';
+            document.getElementById('edit-photo-container').style.display = (action === 'photo') ? 'block' : 'none';
+            let list = (activeSquadTeamId === 1) ? currentMatch.squad1 : currentMatch.squad2;
+            let p = list[activeSquadPlayerIndex];
+            let val = (typeof p === 'object') ? (action==='name'?p.name:p.role) : (action==='name'?p:'');
+            if(action === 'name') document.getElementById('edit-p-name').value = val;
+            if(action === 'role') document.getElementById('edit-p-role').value = val || '';
+        }
+        function savePlayerEdit() {
+            if(activeEditAction === 'name') updateSquadData('name', document.getElementById('edit-p-name').value);
+            else if(activeEditAction === 'role') updateSquadData('role', document.getElementById('edit-p-role').value);
+            else if(activeEditAction === 'photo') { let f = document.getElementById('edit-p-photo').files[0]; if(f) { let r = new FileReader(); r.onloadend = function(){ updateSquadData('photo', r.result); }; r.readAsDataURL(f); } }
+            document.getElementById('playerEditModal').style.display = 'none';
+        }
+        function updateSquadData(field, value) {
+            let list = (activeSquadTeamId === 1) ? currentMatch.squad1 : currentMatch.squad2;
+            let p = list[activeSquadPlayerIndex];
+            let pObj = (typeof p === 'object') ? p : { name: p, role: '', photo: '' };
+            pObj[field] = value; list[activeSquadPlayerIndex] = pObj;
+            socket.emit('updateSquads', { squad1: currentMatch.squad1, squad2: currentMatch.squad2 });
+        }
+        function deleteSquadPlayer() { if(confirm("Delete Player?")) { if(activeSquadTeamId === 1) currentMatch.squad1.splice(activeSquadPlayerIndex, 1); else currentMatch.squad2.splice(activeSquadPlayerIndex, 1); socket.emit('updateSquads', { squad1: currentMatch.squad1, squad2: currentMatch.squad2 }); } }
+
+        // SCORING
+        function updateScore(r,b,e){ let rv=(r==='W')?0:r; currentMatch.runs+=rv; if(e==='WD'||e==='NB') currentMatch.runs++; let v=(e!=='WD'&&e!=='NB'); if(v){ currentMatch.balls++; currentMatch.bowler.balls++; if(r!=='W') currentMatch.striker.balls++; partnership.balls++; } if(e===''||e==='Boundary'){ currentMatch.striker.runs+=rv; partnership.runs+=rv; if(b&&rv==4)currentMatch.striker.fours++; if(b&&rv==6)currentMatch.striker.sixes++; } if(e!=='B'&&e!=='LB'){currentMatch.bowler.runs+=rv; if(e==='WD'||e==='NB')currentMatch.bowler.runs++;} if(r==='W'){currentMatch.wickets++; currentMatch.bowler.wickets++; currentMatch.thisOver.push('W'); currentMatch.outPlayers.push(currentMatch.striker.name); partnership={runs:0,balls:0}; }else{currentMatch.thisOver.push(rv+(e||""));} let ov=Math.floor(currentMatch.balls/6); let bl=currentMatch.balls%6; currentMatch.overs=ov+"."+bl; if((rv%2!==0)&&v&&e!=='B'&&e!=='LB')swapStrike(); if(currentMatch.balls%6===0 && currentMatch.balls>0 && v) swapStrike(); socket.emit('scoreUpdate', currentMatch); if(currentMatch.balls%6===0 && v) setTimeout(promptNewBowler,500); if(r==='W') setTimeout(promptNewBatsman,500); }
+        function closeModal(id){document.getElementById(id).style.display='none';}
+        function openFielderModal(type) {
+            let pendingWicketType = type; let fieldContainer = document.getElementById('fielder-select-container'); let fielderSelect = document.getElementById('fielderSelect');
+            if(type === 'Catch' || type === 'Run Out') {
+                fieldContainer.style.display = 'block'; fielderSelect.innerHTML = "";
+                let fieldingSquad = (currentMatch.inning === 1) ? currentMatch.squad2 : currentMatch.squad1;
+                fieldingSquad.forEach(p => { let name = (typeof p === 'object') ? p.name : p; fielderSelect.innerHTML += `<option value="${name}">${name}</option>`; });
+            } else { fieldContainer.style.display = 'none'; }
+            document.getElementById('confirmWicketBtn').onclick = function() { confirmWicket(pendingWicketType); };
+            document.getElementById('wicketTypeModal').style.display='flex';
+        }
+        function confirmWicket(t){closeModal('wicketTypeModal'); updateScore('W',false,t);}
+        function openWicketModal(){document.getElementById('wicketTypeModal').style.display='flex';}
+        function swapStrike(){ let t=currentMatch.striker; currentMatch.striker=currentMatch.nonStriker; currentMatch.nonStriker=t; socket.emit('scoreUpdate', currentMatch); }
+        function startSecondInnings(){ if(confirm("Start 2nd Innings?")) { socket.emit('changeInnings'); document.getElementById('endInnBtn').style.display='none'; partnership={runs:0,balls:0}; } }
+        function confirmReset(){ if(confirm("Reset?")) { socket.emit('resetInningScore'); partnership={runs:0,balls:0}; } }
+        function undoLast() { socket.emit('undoLastAction'); }
+
+        // CHART & DATA
+        function renderRunRateChart() {
+            let ctx = document.getElementById('runRateChart').getContext('2d');
+            let history = currentMatch.overHistory || [0]; let labels = history.map((_, i) => i);
+            if(runRateChart) runRateChart.destroy();
+            runRateChart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'Total Runs', data: history, borderColor: '#2962ff', backgroundColor: 'rgba(41, 98, 255, 0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: false } });
+        }
+
+        function updateDropdowns() { let sA=document.getElementById('selectTeamA'), sB=document.getElementById('selectTeamB'), pl=document.getElementById('poolList'), selA=sA.value; sA.innerHTML=""; sB.innerHTML=""; pl.innerHTML=""; availableTeams.forEach((t,i)=>{ sA.innerHTML+=`<option value="${i}" ${i==selA?'selected':''}>${t.name}</option>`; sB.innerHTML+=`<option value="${i}" ${i==selA?'disabled':''}>${t.name}</option>`; pl.innerHTML+=`<div class="team-chip"><b>${t.name}</b> (${t.players.length})</div>`; }); if(availableTeams.length>1 && sB.selectedIndex===-1) sB.selectedIndex=(selA==0)?1:0; }
+        function finishSetup() { 
+            let tA=availableTeams[document.getElementById('selectTeamA').value];
+            let tB=availableTeams[document.getElementById('selectTeamB').value];
+            
+            // VALIDATION: Check if teams are selected
+            if (!tA || !tB) {
+                alert("Please select both Team A and Team B.");
+                return;
+            }
+
+            // GET TOURNAMENT NAME from the readonly input value
+            let tName = document.getElementById('tourNameInput').value;
+
+            socket.emit('startMatch', {
+                tournamentName: tName, 
+                team1Name:tA.name, 
+                team2Name:tB.name, 
+                squad1:tA.players, 
+                squad2:tB.players, 
+                overs:document.getElementById('matchOvers').value
+            }); 
+            
+            if(tA.players.length>=2) socket.emit('updatePlayers', { striker: tA.players[0], nonStriker: tA.players[1], bowler: tB.players[0] }); 
+            
+            // SHOW SCORING WINDOW & GO TO DASHBOARD
+            document.getElementById('nav-scoring').style.display = 'flex';
+            switchView('dashboard', document.getElementById('nav-scoring'));
+        }
+        function addTeamToPool() { let n=document.getElementById('poolTeamName').value, s=document.getElementById('poolTeamSquad').value.split(',').map(x=>x.trim()).filter(x=>x); if(n){availableTeams.push({name:n, players:s, logo:""}); socket.emit('addTeamPool', {name:n, players:s, logo:""}); updateDropdowns(); document.getElementById('poolTeamName').value=""; document.getElementById('poolTeamSquad').value="";} }
+        function renderTeamsGrid() { let g=document.getElementById('teams-grid-container'); g.innerHTML=""; availableTeams.forEach((t,i)=>{ let l=t.logo?`<img src="${t.logo}" style="width:40px;">`:'<i class="fas fa-shield-alt team-icon"></i>'; g.innerHTML+=`<div class="team-card" onclick="openTeamDetails(${i})">${l}<h3>${t.name}</h3></div>`; }); }
+        function openTeamDetails(i){ currentEditIndex=i; document.getElementById('td-modal-title').innerText=availableTeams[i].name; document.getElementById('td-team-name').value=availableTeams[i].name; if(availableTeams[i].logo) {document.getElementById('td-logo-preview').src=availableTeams[i].logo; document.getElementById('td-logo-preview').style.display='block';document.getElementById('td-shield-icon').style.display='none';} else {document.getElementById('td-logo-preview').style.display='none';document.getElementById('td-shield-icon').style.display='block';} renderTeamsSectionSquad(availableTeams[i].players); document.getElementById('teamDetailModal').style.display='flex'; }
+        
+        function renderTeamsSectionSquad(p){ let l=document.getElementById('td-squad-list'); l.innerHTML=""; p.forEach(x => { let name = (typeof x==='object')?x.name:x; let role = (typeof x==='object'&&x.role)?`(${x.role})`:''; let photo = (typeof x==='object'&&x.photo)?`<img src="${x.photo}">`:`<i class="fas fa-user"></i>`; l.innerHTML+=`<li class="player-card-item"><div class="sq-avatar-small">${photo}</div><div class="sq-info"><span>${name}</span><span class="sq-role">${role}</span></div></li>`; }); }
+        function addPlayerToTeam(){ let n=document.getElementById('new-p-name').value; if(n){ availableTeams[currentEditIndex].players.push(n); renderTeamsSectionSquad(availableTeams[currentEditIndex].players); document.getElementById('new-p-name').value=""; socket.emit('updateTeam', {index:currentEditIndex, team:availableTeams[currentEditIndex]}); } }
+        function updateTeamDetails(){ availableTeams[currentEditIndex].name=document.getElementById('td-team-name').value; socket.emit('updateTeam', {index:currentEditIndex, team:availableTeams[currentEditIndex]}); alert("Updated"); }
+        function deleteTeam(){ if(confirm("Delete?")){ socket.emit('deleteTeam', currentEditIndex); document.getElementById('teamDetailModal').style.display='none'; renderTeamsGrid(); } }
+        function closeTeamDetailModal(){ document.getElementById('teamDetailModal').style.display='none'; renderTeamsGrid(); }
+        function renderMatchesView() { let liveDiv = document.getElementById('live-match-card'), histDiv = document.getElementById('completed-matches-list'); liveDiv.innerHTML = (currentMatch && currentMatch.isLive) ? `<div class="match-card-row"><div class="mc-teams">${currentMatch.team1} vs ${currentMatch.team2}</div><div class="mc-score">${currentMatch.runs}/${currentMatch.wickets} (${currentMatch.overs})</div><div class="mc-status status-live">LIVE</div><button onclick="endMatch()" style="margin-left:10px;font-size:10px;">End</button></div>` : '<div style="color:#999;">No live match.</div>'; histDiv.innerHTML = ""; matchesHistory.forEach(m => histDiv.innerHTML += `<div class="match-card-row"><div class="mc-teams">${m.team1} vs ${m.team2}</div><div class="mc-score">${m.runs}/${m.wickets}</div><div class="mc-status status-done">DONE</div></div>`); }
+        function endMatch() { if(confirm("End Match?")) socket.emit('endMatch'); }
+        function saveTournamentInfo() { 
+            let name = document.getElementById('t-name').value;
+            if(name) {
+                socket.emit('updateTournamentInfo', { ...currentMatch.tournamentInfo, name: name });
+                // --- FIX: INSTANT UI UPDATE ---
+                document.getElementById('display-tour-name').innerText = name;
+                alert("Tournament Name Updated!");
+            }
+        }
+        function clearTourForm() { document.getElementById('t-name').value = ""; }
+        function uploadLogo() { let file = document.getElementById('tour-logo-input').files[0]; if(file) { let r = new FileReader(); r.onloadend = function() { document.getElementById('tour-logo-img').src = r.result; document.getElementById('tour-logo-img').style.display='block'; document.getElementById('logo-ph-text').style.display='none'; }; r.readAsDataURL(file); } }
+        function removeLogo() { document.getElementById('tour-logo-img').src=""; document.getElementById('tour-logo-img').style.display='none'; document.getElementById('logo-ph-text').style.display='block'; }
+        function promptNewBowler() { let s=document.getElementById('bowlerSelect'); s.innerHTML=""; let maxOvers=Math.ceil(currentMatch.maxOvers/5); currentMatch.squad2.forEach(p=>{ let name = (typeof p === 'object') ? p.name : p; let b=currentMatch.bowlingScorecard[name]||{overs:"0.0",balls:0}; let css=(Math.floor(b.balls/6)>=maxOvers)?'class="red-option"':''; s.innerHTML+=`<option value="${name}" ${css}>${name} (${b.overs})</option>`; }); document.getElementById('bowlerModal').style.display='flex'; }
+        function confirmNewBowler() { socket.emit('updatePlayers', { bowler: document.getElementById('bowlerSelect').value, resetThisOver: true }); document.getElementById('bowlerModal').style.display='none'; }
+        function promptNewBatsman(type) { let s=document.getElementById('newBatSelect'); s.innerHTML=""; let out=currentMatch.outPlayers||[]; currentMatch.squad1.forEach(p=>{ let name = (typeof p === 'object') ? p.name : p; if(name!==currentMatch.striker.name && name!==currentMatch.nonStriker.name && !out.includes(name)) s.innerHTML+=`<option value="${name}">${name}</option>`; }); document.getElementById('newBatsmanModal').style.display='flex'; }
+        function confirmNewBatsman() { let nb=document.getElementById('newBatSelect').value; if(!currentMatch.striker.name) socket.emit('updatePlayers',{striker:nb}); else if(!currentMatch.nonStriker.name) socket.emit('updatePlayers',{nonStriker:nb}); else socket.emit('updatePlayers',{striker:nb}); document.getElementById('newBatsmanModal').style.display='none'; }
+        function toggleMenu(id) { let m=document.getElementById(id); let v=m.style.display==='block'; document.querySelectorAll('.options-menu').forEach(x=>x.style.display='none'); if(!v) m.style.display='block'; }
+        function actionChangePlayer(role) { document.querySelectorAll('.options-menu').forEach(m=>m.style.display='none'); if(role==='bowler') promptNewBowler(); else promptNewBatsman(role==='striker'?'Striker':'Non-Striker'); }
+        function actionRetireHurt(role) { document.querySelectorAll('.options-menu').forEach(m=>m.style.display='none'); if(confirm("Retire?")) updateScore('W',false,'Retired'); }
+        function actionEditPlayer(role) { document.querySelectorAll('.options-menu').forEach(m=>m.style.display='none'); let cName = (role==='striker')?currentMatch.striker.name:(role==='nonStriker')?currentMatch.nonStriker.name:currentMatch.bowler.name; let nName = prompt("Edit Name:", cName); if(nName) { let o={}; o[role]=nName; socket.emit('updatePlayers', o); } }
+        window.onclick = function(e) { if (!e.target.matches('.three-dots') && !e.target.matches('.sq-dots')) document.querySelectorAll('.options-menu').forEach(m=>m.style.display='none'); }
+        function checkOverlayMode() { if(new URLSearchParams(window.location.search).get('overlay')) { document.body.classList.add('overlay-mode'); socket.emit('loginRequest', {id:'admin', pass:'1234'}); } }
+        function openOverlay(type) { window.open(window.location.pathname + '?overlay=' + type, 'OBS_Overlay_' + type, 'width=720,height=300'); }
+        function updateOverlayContent(data) { const type = new URLSearchParams(window.location.search).get('overlay'); if(!type) return; if(type==='bowler') { let b = data.currentMatch.bowler; let econ = (Math.floor(b.balls/6)>0)?(b.runs/(b.balls/6)).toFixed(2):"0.00"; document.getElementById('obs-p-name').innerText=b.name||"BOWLER"; document.getElementById('obs-p-score').innerText=""; document.getElementById('obs-val-runs').innerText=b.runs; document.getElementById('obs-val-balls').innerText=0; document.getElementById('obs-val-4s').innerText=b.wickets; document.getElementById('obs-val-6s').innerText=0; document.getElementById('obs-val-sr').innerText=econ; document.getElementById('obs-lbl-1').innerText="Overs"; document.getElementById('obs-val-1').innerText=b.overs; document.getElementById('obs-lbl-4').innerText="Wkts"; } else { let p = (type==='striker')?data.currentMatch.striker:data.currentMatch.nonStriker; let sr = (p.balls>0)?((p.runs/p.balls)*100).toFixed(2):"0.00"; document.getElementById('obs-p-name').innerText=p.name||"PLAYER"; document.getElementById('obs-p-score').innerText=`${p.runs} (${p.balls})`; document.getElementById('obs-val-runs').innerText=p.runs; document.getElementById('obs-val-balls').innerText=p.balls; document.getElementById('obs-val-4s').innerText=p.fours; document.getElementById('obs-val-6s').innerText=p.sixes; document.getElementById('obs-val-sr').innerText=sr; } }
+        function addNewPlayer(tid) { let name = document.getElementById(tid===1?'new-p1':'new-p2').value; if(name) { if(tid===1) currentMatch.squad1.push(name); else currentMatch.squad2.push(name); socket.emit('updateSquads', {squad1:currentMatch.squad1, squad2:currentMatch.squad2}); } }
+        function uploadTeamLogo() { let f=document.getElementById('td-logo-input').files[0]; if(f){ let r=new FileReader(); r.onloadend=function(){availableTeams[currentEditIndex].logo=r.result; updateTeamOnServer(); openTeamDetails(currentEditIndex);}; r.readAsDataURL(f); } }
+        function updateTeamOnServer() { socket.emit('updateTeam', {index:currentEditIndex, team:availableTeams[currentEditIndex]}); }
+
+        socket.on('updateData', (data) => { updateUI(data); });
+        function updateUI(data) {
+            currentMatch = data.currentMatch; availableTeams = data.allTeams || []; matchesHistory = data.matchesHistory || [];
+            updateOverlayContent(data);
+            
+            // WIZARD CHECK
+            if(role === 'host') checkWelcomeStatus(data);
+            
+            // UI UPDATES
+            // NEW: Show "Pro Cricket Scorer" as default unless name is set and NOT the old default
+            let dispName = data.tournamentInfo.name;
+            // If name is effectively empty or matches our internal defaults, show placeholder or the name
+            if(dispName && dispName !== "Pro Cricket 2025" && dispName !== "New Tournament") {
+                 document.getElementById('display-tour-name').innerText = dispName;
+            } else {
+                 document.getElementById('display-tour-name').innerText = "Pro Cricket Scorer";
+            }
+            document.getElementById('t-name').value = data.tournamentInfo.name;
+
+            // ---- CRUCIAL: ALSO UPDATE MATCH SETUP NAME ----
+            document.getElementById('tourNameInput').value = data.tournamentInfo.name;
+
+            if(currentMatch.isLive) document.getElementById('nav-scoring').style.display = 'flex';
+            else document.getElementById('nav-scoring').style.display = 'none';
+
+            document.getElementById('team1-disp').innerText = currentMatch.team1; document.getElementById('team2-disp').innerText = currentMatch.team2;
+            document.getElementById('score-t1').innerText = (currentMatch.inning===1) ? `${currentMatch.runs}/${currentMatch.wickets}` : "0/0";
+            document.getElementById('score-t2').innerText = (currentMatch.inning===2) ? `${currentMatch.runs}/${currentMatch.wickets}` : "0/0";
+            document.getElementById('overs-t1').innerText = (currentMatch.inning===1) ? currentMatch.overs : "0.0";
+            document.getElementById('overs-t2').innerText = (currentMatch.inning===2) ? currentMatch.overs : "0.0";
+            
+            let b = currentMatch.balls; let crr = (b > 0) ? (currentMatch.runs / (b/6)).toFixed(2) : "0.00";
+            if(currentMatch.inning===1) document.getElementById('crr-t1').innerText = crr; else document.getElementById('crr-t2').innerText = crr;
+
+            let t1 = availableTeams.find(t=>t.name===currentMatch.team1); let t2 = availableTeams.find(t=>t.name===currentMatch.team2);
+            if(t1 && t1.logo) { document.getElementById('tm1-logo').src=t1.logo; document.getElementById('tm1-logo').style.display='block'; document.getElementById('tm1-icon').style.display='none'; }
+            if(t2 && t2.logo) { document.getElementById('tm2-logo').src=t2.logo; document.getElementById('tm2-logo').style.display='block'; document.getElementById('tm2-icon').style.display='none'; }
+
+            let s=currentMatch.striker, ns=currentMatch.nonStriker, bw=currentMatch.bowler;
+            let sr1=(s.balls>0)?((s.runs/s.balls)*100).toFixed(2):"0.00", sr2=(ns.balls>0)?((ns.runs/ns.balls)*100).toFixed(2):"0.00";
+            let econ=(Math.floor(bw.balls/6)>0)?(bw.runs/(bw.balls/6)).toFixed(2):"0.00";
+
+            document.getElementById('p1-name').innerText=s.name||"SELECT"; document.getElementById('p1-stats').innerText=`${s.runs}(${s.balls})`; document.getElementById('p1-details').innerHTML=`4s:<b>${s.fours}</b> 6s:<b>${s.sixes}</b> SR:<b>${sr1}</b>`;
+            document.getElementById('p2-name').innerText=ns.name||"SELECT"; document.getElementById('p2-stats').innerText=`${ns.runs}(${ns.balls})`; document.getElementById('p2-details').innerHTML=`4s:<b>${ns.fours}</b> 6s:<b>${ns.sixes}</b> SR:<b>${sr2}</b>`;
+            document.getElementById('bwl-name').innerText=bw.name||"SELECT"; document.getElementById('bwl-stats').innerText=`${bw.wickets}-${bw.runs} (${bw.overs})`; document.getElementById('bwl-details').innerHTML=`Econ: <b>${econ}</b>`;
+            document.getElementById('bwl-dots').innerText=0; document.getElementById('bwl-extra').innerText=0;
+            document.getElementById('this-over').innerText = currentMatch.thisOver.join(" ");
+            
+            let ballsHtml = "";
+            let recentBalls = currentMatch.thisOver || [];
+            recentBalls.forEach(ball => {
+                let cls = (ball==='4')?'ball-4':(ball==='6')?'ball-6':(ball==='W')?'ball-w':'';
+                ballsHtml += `<div class="ball-circle ${cls}">${ball}</div>`;
+            });
+            document.getElementById('ball-circles').innerHTML = ballsHtml;
+
+            document.getElementById('part-runs').innerText = partnership.runs; document.getElementById('part-balls').innerText = partnership.balls;
+
+            // Updated Squad Logic
+            document.getElementById('t1-head').innerText = currentMatch.team1;
+            let s1 = document.getElementById('squad-list-1'); s1.innerHTML = "";
+            if(currentMatch.squad1) currentMatch.squad1.forEach((p, idx) => {
+                let name = (typeof p === 'object') ? p.name : p;
+                let role = (typeof p === 'object' && p.role) ? `(${p.role})` : '';
+                let photo = (typeof p === 'object' && p.photo) ? `<img src="${p.photo}">` : `<i class="fas fa-user"></i>`;
+                s1.innerHTML += `<li class="player-card-item"><div class="sq-avatar-small">${photo}</div><div class="sq-info"><span>${name}</span><span class="sq-role">${role}</span></div><i class="fas fa-ellipsis-v sq-dots" onclick="openSquadActions(1, ${idx})"></i></li>`;
+            });
+
+            document.getElementById('t2-head').innerText = currentMatch.team2;
+            let s2 = document.getElementById('squad-list-2'); s2.innerHTML = "";
+            if(currentMatch.squad2) currentMatch.squad2.forEach((p, idx) => {
+                let name = (typeof p === 'object') ? p.name : p;
+                let role = (typeof p === 'object' && p.role) ? `(${p.role})` : '';
+                let photo = (typeof p === 'object' && p.photo) ? `<img src="${p.photo}">` : `<i class="fas fa-user"></i>`;
+                s2.innerHTML += `<li class="player-card-item"><div class="sq-avatar-small">${photo}</div><div class="sq-info"><span>${name}</span><span class="sq-role">${role}</span></div><i class="fas fa-ellipsis-v sq-dots" onclick="openSquadActions(2, ${idx})"></i></li>`;
+            });
+            
+            if(!s.name) promptNewBatsman('Striker'); else if(!ns.name) promptNewBatsman('Non'); else if(!bw.name) promptNewBowler();
+            if((currentMatch.balls >= currentMatch.maxOvers*6 || currentMatch.wickets >= 10) && currentMatch.inning===1) document.getElementById('endInnBtn').style.display='block'; else document.getElementById('endInnBtn').style.display='none';
+            
+            // REFRESH GRID IF TEAMS VIEW IS ACTIVE
+            if(document.getElementById('view-teams').classList.contains('active')) renderTeamsGrid();
+            
+            if(document.getElementById('view-matches').classList.contains('active')) renderMatchesView();
+            if(document.getElementById('view-stats').classList.contains('active')) renderRunRateChart();
+        }
+        checkOverlayMode();
+    </script>
+</body>
+</html>

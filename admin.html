@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f2f4f8; padding: 30px; }
+        .admin-box { background: white; padding: 30px; border-radius: 10px; max-width: 900px; margin: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h2 { color: #1a237e; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 20px; align-items: end; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn { padding: 10px 20px; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-add { background: #28a745; }
+        .user-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .user-table th, .user-table td { padding: 12px; border: 1px solid #eee; text-align: left; }
+        .user-table th { background: #1a237e; color: white; }
+        .del-btn { color: red; cursor: pointer; }
+        .logout { float: right; color: red; cursor: pointer; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="admin-box">
+        <a href="home.html" class="logout" onclick="sessionStorage.clear()">Logout</a>
+        <h2>Create Tournament Accounts</h2>
+        
+        <div class="form-grid">
+            <div><label>Username</label><input id="new-user"></div>
+            <div><label>Password</label><input id="new-pass"></div>
+            <div><label>Tournament Name</label><input id="new-tour"></div>
+            <div><label>Valid Till</label><input type="date" id="new-date"></div>
+            <button class="btn btn-add" onclick="createUser()">+ Create</button>
+        </div>
+
+        <table class="user-table">
+            <thead><tr><th>Username</th><th>Password</th><th>Tournament</th><th>Expiry</th><th>Action</th></tr></thead>
+            <tbody id="user-list"></tbody>
+        </table>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        
+        if(sessionStorage.getItem('role') !== 'admin') window.location.href = 'home.html';
+        
+        let users = JSON.parse(sessionStorage.getItem('usersData') || '[]');
+        renderUsers(users);
+
+        function createUser() {
+            let u = document.getElementById('new-user').value;
+            let p = document.getElementById('new-pass').value;
+            let t = document.getElementById('new-tour').value;
+            let d = document.getElementById('new-date').value;
+            if(u && p && t && d) {
+                socket.emit('createUser', { username: u, password: p, tournamentName: t, expiry: d });
+            } else { alert("Fill all fields"); }
+        }
+
+        function deleteUser(username) {
+            if(confirm("Delete User?")) socket.emit('deleteUser', username);
+        }
+
+        socket.on('refreshUserList', (updatedUsers) => {
+            users = updatedUsers;
+            renderUsers(users);
+            document.getElementById('new-user').value = "";
+            document.getElementById('new-pass').value = "";
+            document.getElementById('new-tour').value = "";
+        });
+        
+        socket.on('userActionError', (msg) => alert(msg));
+
+        function renderUsers(list) {
+            let tbody = document.getElementById('user-list'); tbody.innerHTML = "";
+            list.forEach(u => {
+                tbody.innerHTML += `<tr><td>${u.username}</td><td>${u.password}</td><td>${u.tournamentName}</td><td>${u.expiry}</td><td><i class="fas fa-trash del-btn" onclick="deleteUser('${u.username}')"></i></td></tr>`;
+            });
+        }
+    </script>
+</body>
+</html>

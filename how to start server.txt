@@ -1,0 +1,18 @@
+npm init -y
+
+npm install express socket.io
+
+node server.js
+
+
+तुम्ही (Admin Panel): 👉 http://localhost:3000/admin.html (इथे बटन दाबून स्कोर वाढवून बघा).
+
+OBS साठी (Overlay): 👉 http://localhost:3000/obs.html (हे OBS मध्ये Browser Source म्हणून ॲड करा).
+
+मोबाईलवर पाहण्यासाठी (Viewer): 👉 http://192.168.1.5:3000/viewer.html
+
+rohit, sachin, virendra, anil, sunil, kartik, harbhajan, vinod,
+bill gets, willium, Suzuki, gill crist, malinga, Afridi, lara
+ruresh, Mahesh, Ramesh, vinesh, Dipesh, bhavesh
+
+  hinganghat   wardha

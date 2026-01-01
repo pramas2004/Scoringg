@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Scoreboard Theme</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            margin-bottom: 40px;
+            color: #ffcc00;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+        }
+
+        .theme-container {
+            display: flex;
+            gap: 40px;
+        }
+
+        .theme-card {
+            background: #2c3e50;
+            border: 3px solid #444;
+            border-radius: 15px;
+            padding: 30px;
+            width: 250px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        .theme-card:hover {
+            transform: translateY(-10px);
+            border-color: #ffcc00;
+            background: #34495e;
+            box-shadow: 0 15px 30px rgba(255, 204, 0, 0.2);
+        }
+
+        .icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        h2 { margin: 10px 0; color: white; }
+        
+        p { color: #bdc3c7; font-size: 14px; margin-bottom: 20px; }
+
+        button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        .theme-card:hover button {
+            background: #2ecc71;
+            box-shadow: 0 0 10px #2ecc71;
+        }
+        
+        .btn-pro { background: #e67e22; }
+        .theme-card:hover .btn-pro { background: #d35400; box-shadow: 0 0 10px #d35400; }
+
+    </style>
+</head>
+<body>
+
+    <h1>🏏 Select Scoreboard Theme</h1>
+
+    <div class="theme-container">
+        <div class="theme-card" onclick="selectTheme('simple.html')">
+            <div class="icon">📄</div>
+            <h2>Theme 1 (Simple)</h2>
+            <p>Clean, Minimal & Fast. No heavy animations.</p>
+            <button>Select Simple</button>
+        </div>
+
+        <div class="theme-card" onclick="selectTheme('pro.html')">
+            <div class="icon">📺</div>
+            <h2>Theme 2 (Pro TV)</h2>
+            <p>3D Graphics, CRR, Animations & "This Over".</p>
+            <button class="btn-pro">Select Pro TV</button>
+        </div>
+    </div>
+
+    <script>
+        function selectTheme(file) {
+            // त्याच विंडोमध्ये नवीन पेज उघडा
+            window.location.href = file;
+        }
+    </script>
+
+</body>
+</html>

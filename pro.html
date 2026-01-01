@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pro Theme</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500;700;900&display=swap');
+        body { background: transparent; margin: 0; overflow: hidden; font-family: 'Roboto', sans-serif; }
+        
+        /* ANIMATIONS */
+        @keyframes slideInLeft { from { transform: translateX(-50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes pulseGlow { 0% { transform: scale(1); } 50% { transform: scale(1.05); text-shadow: 0 0 10px #ffcc00; } 100% { transform: scale(1); } }
+        @keyframes bounceIn { 0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; } 50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+        @keyframes fadeOut { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
+
+        /* BOUNDARY CARDS */
+        .boundary-card { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 60px; border-radius: 20px; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.8); z-index: 9999; display: none; border: 8px solid white; }
+        .boundary-card h1 { margin: 0; font-size: 120px; font-weight: 900; line-height: 1; -webkit-text-stroke: 3px black; }
+        .boundary-card p { margin: 0; font-size: 40px; font-weight: bold; text-transform: uppercase; color: white; text-shadow: 2px 2px 4px black; }
+        .card-four { background: linear-gradient(135deg, #f1c40f, #f39c12); color: #fff; text-shadow: 0 0 20px #f1c40f; }
+        .card-six { background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff; text-shadow: 0 0 20px #e74c3c; }
+        .anim-enter { display: block; animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .anim-exit { animation: fadeOut 0.5s ease-in forwards; }
+
+        /* LAYOUT */
+        .tour-badge { position: fixed; bottom: 135px; left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, #ff8c00, #ffcc00); color: #000; padding: 5px 40px; font-weight: 900; border-radius: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); text-transform: uppercase; letter-spacing: 2px; font-size: 14px; border: 2px solid #fff; }
+        .scoreboard-container { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; width: 98%; max-width: 1850px; color: white; text-transform: uppercase; }
+        .team-badge { background: linear-gradient(180deg, #003366, #001a33); padding: 15px 15px; border-radius: 10px; font-weight: bold; font-size: 20px; z-index: 2; border: 3px solid white; min-width: 120px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.4); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        .main-bar { background: linear-gradient(180deg, #ffffff 0%, #dcdcdc 100%); height: 85px; flex-grow: 1; margin: 0 -15px; display: flex; align-items: center; justify-content: space-between; border-radius: 15px; position: relative; z-index: 1; color: #002f6c; padding: 0 40px; box-shadow: inset 0 2px 5px rgba(255,255,255,0.8), 0 10px 20px rgba(0,0,0,0.3); border-bottom: 4px solid #aaa; }
+        .center-score-pill { background: linear-gradient(180deg, #0056b3, #002a5c); color: white; padding: 5px 30px; border-radius: 10px; text-align: center; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 3px solid #fff; min-width: 300px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: center; }
+        .match-status { font-size: 12px; color: #81d4fa; margin-bottom: 0px; letter-spacing: 1px; font-weight: bold;}
+        .big-score { font-size: 38px; font-weight: 900; letter-spacing: 1px; line-height: 1; text-shadow: 2px 2px 0px #000; }
+        .overs { font-size: 18px; background: #e74c3c; padding: 2px 8px; border-radius: 4px; margin-left: 10px; vertical-align: middle; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .run-rates { font-size: 12px; color: #ffeb3b; margin-top: 4px; font-weight: bold; letter-spacing: 0.5px; }
+        .batter-info { display: flex; flex-direction: column; font-size: 17px; font-weight: 800; gap: 5px; width: 450px; }
+        .batter-row { display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 3px; transition: all 0.3s ease; opacity: 0.6; color: #222; }
+        .active-striker { opacity: 1 !important; color: #000; transform: scale(1.02); text-shadow: 0 0 1px #000; }
+        .striker-icon { color: #d35400; margin-right: 8px; opacity: 0; transition: opacity 0.3s; }
+        .active-striker .striker-icon { opacity: 1; }
+        
+        .bowler-container { display: flex; flex-direction: column; align-items: flex-end; width: 450px; }
+        .bowler-info { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-size: 18px; font-weight: 800; color: #000; margin-bottom: 5px; width: 100%; white-space: nowrap; }
+        .bowler-fig { background: #2c3e50; color: white; padding: 2px 8px; border-radius: 4px; font-size: 16px; white-space: nowrap; }
+        
+        /* --- THIS OVER SECTION (UPDATED LAYOUT) --- */
+        .this-over-wrapper { 
+            display: flex; 
+            align-items: center; /* Vertically center */
+            justify-content: flex-end; /* Align right */
+            gap: 10px; /* Space between label and balls */
+            margin-top: 5px;
+        }
+        
+        .this-over-label { 
+            font-size: 11px; font-weight: 900; color: #555; 
+            letter-spacing: 1px; background: #fff; padding: 3px 6px; 
+            border-radius: 3px; border: 1px solid #ccc; 
+            white-space: nowrap;
+        }
+        
+        .this-over { display: flex; gap: 6px; justify-content: flex-end;}
+        
+        /* --- BALL STYLES --- */
+        .ball-circle { 
+            width: 26px; height: 26px; 
+            background: radial-gradient(circle at 30% 30%, #fff, #f1c40f);
+            color: black; border-radius: 50%; font-size: 13px; font-weight: 900; 
+            display: flex; align-items: center; justify-content: center; 
+            border: 1px solid #c0392b; box-shadow: 1px 2px 3px rgba(0,0,0,0.3); 
+        }
+
+        /* WICKET (Red Square) */
+        .wicket-box { 
+            width: 26px; height: 26px;
+            background: linear-gradient(135deg, #ff4d4d, #990000); 
+            color: white; font-size: 13px; font-weight: 900; 
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid #fff; border-radius: 3px;
+            box-shadow: 1px 2px 3px rgba(0,0,0,0.3);
+        }
+        
+        /* BOUNDARY (Blue Ball) */
+        .boundary-ball {
+            background: radial-gradient(circle at 30% 30%, #89cff0, #003366);
+            color: white; border: 1px solid #fff; 
+            transform: scale(1.1); text-shadow: 1px 1px 2px black;
+        }
+
+        .animate-batter { animation: slideInLeft 0.5s ease-out; }
+        .animate-bowler { animation: slideInRight 0.5s ease-out; }
+        .score-pulse { animation: pulseGlow 0.3s ease-in-out; }
+    </style>
+</head>
+<body>
+    
+    <div id="popup-four" class="boundary-card card-four"><h1>4</h1><p>BOUNDARY</p></div>
+    <div id="popup-six" class="boundary-card card-six"><h1>6</h1><p>MAXIMUM</p></div>
+
+    <div id="tour-display" class="tour-badge">TOURNAMENT</div>
+    <div class="scoreboard-container">
+        <div class="team-badge" id="t1-name">TEAM A</div>
+        <div class="main-bar">
+            <div class="batter-info animate-batter" id="batter-container">
+                <div class="batter-row" id="row-1"><span><span class="striker-icon">🏏</span><span id="slot1-name">P1</span></span> <span><span id="slot1-score">0</span> (<span id="slot1-balls">0</span>)</span></div>
+                <div class="batter-row" id="row-2"><span><span class="striker-icon">🏏</span><span id="slot2-name">P2</span></span> <span><span id="slot2-score">0</span> (<span id="slot2-balls">0</span>)</span></div>
+            </div>
+            <div class="center-score-pill">
+                <div class="match-status"><span id="match-vs">VS</span> | LIVE</div>
+                <div class="big-score"><span id="total-runs">0</span>-<span id="total-wickets">0</span> <span class="overs" id="total-overs">0.0</span></div>
+                <div class="run-rates" id="crr-display">CRR: 0.00</div>
+            </div>
+            <div class="bowler-container animate-bowler" id="bowler-container">
+                <div class="bowler-info"><span id="bwl-name">Bowler</span> <span class="bowler-fig" id="bwl-fig">0-0 (0.0)</span></div>
+                <div class="this-over-wrapper">
+                    <div class="this-over-label">THIS OVER</div>
+                    <div class="this-over" id="this-over-balls"></div>
+                </div>
+            </div>
+        </div>
+        <div class="team-badge" id="t2-name">TEAM B</div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let previousRuns = 0, slot1PlayerName = "", slot2PlayerName = "", lastBowler = "";
+
+        function animateScore(targetRuns) {
+            const el = document.getElementById('total-runs');
+            let current = previousRuns; if (current === targetRuns) return;
+            let diff = Math.abs(targetRuns - current);
+            let timer = setInterval(() => {
+                if (current < targetRuns) current++; else current--; el.innerText = current;
+                if (current === targetRuns) { clearInterval(timer); previousRuns = targetRuns; el.classList.remove('score-pulse'); void el.offsetWidth; el.classList.add('score-pulse'); }
+            }, diff > 10 ? 10 : 40);
+        }
+
+        function triggerAnimation(id, className) { let el = document.getElementById(id); el.classList.remove(className); void el.offsetWidth; el.classList.add(className); }
+
+        function showBoundaryAnimation(type) {
+            let id = (type === 'FOUR') ? 'popup-four' : 'popup-six';
+            let el = document.getElementById(id);
+            el.classList.remove('anim-enter', 'anim-exit'); el.style.display = 'none'; void el.offsetWidth;
+            el.style.display = 'block'; el.classList.add('anim-enter');
+            setTimeout(() => { el.classList.remove('anim-enter'); el.classList.add('anim-exit'); }, 3000);
+        }
+
+        socket.on('updateData', (fullData) => {
+            document.getElementById('tour-display').innerText = fullData.tournamentName;
+            const data = fullData.currentMatch;
+
+            if (data.runs !== previousRuns) animateScore(data.runs); else document.getElementById('total-runs').innerText = data.runs;
+
+            document.getElementById('t1-name').innerText = data.team1;
+            document.getElementById('t2-name').innerText = data.team2;
+            document.getElementById('match-vs').innerText = `${data.team1} v ${data.team2}`;
+            document.getElementById('total-wickets').innerText = data.wickets;
+            document.getElementById('total-overs').innerText = `${data.overs} (${data.maxOvers})`;
+            
+            if(lastBowler !== data.bowler.name) { lastBowler = data.bowler.name; triggerAnimation('bowler-container', 'animate-bowler'); }
+            document.getElementById('bwl-name').innerText = data.bowler.name;
+            document.getElementById('bwl-fig').innerText = `${data.bowler.wickets}-${data.bowler.runs} (${data.bowler.overs})`;
+
+            let totalBallsDelivered = data.balls; 
+            let crr = totalBallsDelivered > 0 ? (data.runs / (totalBallsDelivered / 6)).toFixed(2) : 0;
+            let rateText = `CRR: ${crr}`;
+            if (data.inning === 2 && data.target) {
+                let runsNeed = data.target - data.runs; let ballsRem = (data.maxOvers * 6) - totalBallsDelivered;
+                let rrr = ballsRem > 0 ? (runsNeed / (ballsRem / 6)).toFixed(2) : 0;
+                if (data.runs >= data.target) rateText = "MATCH WON"; else rateText += ` | NEED ${runsNeed} OFF ${ballsRem} | RRR: ${rrr}`;
+            }
+            document.getElementById('crr-display').innerText = rateText;
+
+            const s = data.striker, ns = data.nonStriker;
+            if (slot1PlayerName !== s.name && slot1PlayerName !== ns.name) { slot1PlayerName = s.name; slot2PlayerName = ns.name; triggerAnimation('batter-container', 'animate-batter'); }
+            let p1Data, p2Data, isSlot1Striker;
+            if (s.name === slot1PlayerName) { p1Data = s; p2Data = ns; slot2PlayerName = ns.name; isSlot1Striker = true; }
+            else { p1Data = ns; p2Data = s; slot1PlayerName = ns.name; slot2PlayerName = s.name; isSlot1Striker = false; }
+
+            document.getElementById('slot1-name').innerText = p1Data.name;
+            document.getElementById('slot1-score').innerText = p1Data.runs;
+            document.getElementById('slot1-balls').innerText = p1Data.balls;
+            document.getElementById('slot2-name').innerText = p2Data.name;
+            document.getElementById('slot2-score').innerText = p2Data.runs;
+            document.getElementById('slot2-balls').innerText = p2Data.balls;
+
+            const r1 = document.getElementById('row-1'), r2 = document.getElementById('row-2');
+            if (isSlot1Striker) { r1.classList.add('active-striker'); r2.classList.remove('active-striker'); }
+            else { r1.classList.remove('active-striker'); r2.classList.add('active-striker'); }
+
+            const overDiv = document.getElementById('this-over-balls');
+            overDiv.innerHTML = "";
+            data.thisOver.forEach(ball => {
+                let cls;
+                if (ball === 'W') cls = 'wicket-box';
+                else if (ball == 4 || ball == 6) cls = 'ball-circle boundary-ball';
+                else cls = 'ball-circle';
+                
+                overDiv.innerHTML += `<div class="${cls}">${ball}</div>`;
+            });
+
+            if (data.lastEvent === 'FOUR') showBoundaryAnimation('FOUR');
+            if (data.lastEvent === 'SIX') showBoundaryAnimation('SIX');
+        });
+    </script>
+</body>
+</html>

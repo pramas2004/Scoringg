@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Score</title>
+    <style>
+        body { 
+            background: black; color: yellow; font-family: Arial, sans-serif; 
+            display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;
+        }
+        .board { text-align: center; border: 5px solid white; padding: 40px; border-radius: 20px; }
+        h1 { font-size: 80px; margin: 0; }
+        p { font-size: 30px; color: white; }
+    </style>
+</head>
+<body>
+    <div class="board">
+        <h1 id="score">0/0</h1>
+        <p>Overs: <span id="overs">0.0</span></p>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        
+        // सर्व्हरकडून नवीन स्कोर आला की तो दाखवा
+        socket.on('updateScore', (data) => {
+            document.getElementById('score').innerText = `${data.runs}/${data.wickets}`;
+            document.getElementById('overs').innerText = data.overs;
+        });
+    </script>
+</body>
+</html>

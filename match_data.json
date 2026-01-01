@@ -1,0 +1,142 @@
+{
+  "tournamentName": "",
+  "allTeams": [
+    {
+      "name": "Hinganghti Fighter",
+      "players": [
+        "rohit",
+        "sachin",
+        "virendra",
+        "anil",
+        "sunil",
+        "kartik",
+        "harbhajan",
+        "vinod"
+      ]
+    },
+    {
+      "name": "England Wingland",
+      "players": [
+        "bill gets",
+        "willium",
+        "Suzuki",
+        "gill crist",
+        "malinga",
+        "Afridi",
+        "lara",
+        "Alburt "
+      ]
+    },
+    {
+      "name": "Dainamic Wardha",
+      "players": [
+        "ruresh",
+        "Mahesh",
+        "Ramesh",
+        "vinesh",
+        "Dipesh",
+        "bhavesh"
+      ],
+      "logo": ""
+    }
+  ],
+  "currentMatch": {
+    "id": 1767181298489,
+    "team1": "england",
+    "team2": "Hinganghttt",
+    "runs": 75,
+    "wickets": 1,
+    "balls": 26,
+    "overs": "4.2",
+    "maxOvers": 2,
+    "target": 37,
+    "inning": 2,
+    "isLive": true,
+    "striker": {
+      "name": "gill crist",
+      "runs": 0,
+      "balls": 0,
+      "fours": 0,
+      "sixes": 0
+    },
+    "nonStriker": {
+      "name": "bill gets",
+      "runs": 36,
+      "balls": 15,
+      "fours": 0,
+      "sixes": 0
+    },
+    "bowler": {
+      "name": "rohit",
+      "runs": 12,
+      "wickets": 1,
+      "overs": "0.0",
+      "balls": 8
+    },
+    "thisOver": [
+      "2",
+      "2",
+      "2",
+      "2",
+      "2",
+      "1",
+      "1",
+      "W"
+    ],
+    "squad1": [
+      "bill gets",
+      "willium",
+      "Suzuki",
+      "gill crist",
+      "malinga",
+      "Afridi",
+      "lara"
+    ],
+    "squad2": [
+      "rohit",
+      "sachin",
+      "virendra",
+      "anil",
+      "sunil",
+      "kartik",
+      "harbhajan",
+      "vinod"
+    ],
+    "outPlayers": [
+      "willium"
+    ],
+    "bowlingScorecard": {
+      "sachin": {
+        "runs": 0,
+        "wickets": 0,
+        "balls": 0,
+        "overs": "0.0"
+      },
+      "virendra": {
+        "runs": 0,
+        "wickets": 0,
+        "balls": 0,
+        "overs": "0.0"
+      },
+      "rohit": {
+        "runs": 0,
+        "wickets": 0,
+        "balls": 0,
+        "overs": "0.0"
+      }
+    },
+    "overHistory": [
+      0
+    ]
+  },
+  "tournamentInfo": {
+    "name": "RN BOYS cricket tounament",
+    "type": "Knockout Tournament",
+    "limit": "11",
+    "groups": "1",
+    "start": "",
+    "end": "",
+    "state": "Live",
+    "logo": "http://localhost:3000/"
+  }
+}

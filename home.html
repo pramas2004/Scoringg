@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pro Cricket Scorer - Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #1a237e, #283593); height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
+        .welcome-card { background: white; padding: 50px; border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; width: 400px; color: #333; }
+        .app-logo { font-size: 60px; color: #1a237e; margin-bottom: 20px; }
+        h1 { margin: 10px 0 30px; font-weight: 800; color: #1a237e; }
+        .login-btn { display: block; width: 100%; padding: 15px; margin: 15px 0; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .btn-admin { background: #37474f; color: white; } .btn-admin:hover { background: #263238; }
+        .btn-host { background: #2962ff; color: white; } .btn-host:hover { background: #1565c0; }
+        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; }
+        .modal-content { background:white; padding:30px; border-radius:10px; width:350px; text-align:center; }
+        .input-field { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .close-btn { margin-top:10px; color:red; cursor:pointer; font-weight:bold; }
+        .error { color: red; font-size: 12px; display: none; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="welcome-card">
+        <i class="fas fa-baseball-ball app-logo"></i>
+        <h1>PRO CRICKET SCORER</h1>
+        <p style="color:#666; margin-bottom:30px;">Professional Cricket Scoring</p>
+        <button class="login-btn btn-host" onclick="openModal('host')">Tournament Host Login</button>
+        <button class="login-btn btn-admin" onclick="openModal('admin')">Admin Login</button>
+    </div>
+    <div id="adminModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color:#333;">Admin Login</h3>
+            <input type="text" id="adminId" class="input-field" placeholder="Admin ID">
+            <input type="password" id="adminPass" class="input-field" placeholder="Password">
+            <button class="login-btn btn-admin" onclick="adminLogin()">Login</button>
+            <p id="adminError" class="error"></p>
+            <div class="close-btn" onclick="closeModal('admin')">Cancel</div>
+        </div>
+    </div>
+    <div id="hostModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color:#333;">Host Login</h3>
+            <input type="text" id="hostId" class="input-field" placeholder="Username">
+            <input type="password" id="hostPass" class="input-field" placeholder="Password">
+            <button class="login-btn btn-host" onclick="hostLogin()">Start Scoring</button>
+            <p id="hostError" class="error"></p>
+            <div class="close-btn" onclick="closeModal('host')">Cancel</div>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        function openModal(type) { document.getElementById(type+'Modal').style.display = 'flex'; }
+        function closeModal(type) { document.getElementById(type+'Modal').style.display = 'none'; }
+        function adminLogin() { let id = document.getElementById('adminId').value; let pass = document.getElementById('adminPass').value; socket.emit('adminLogin', { id, pass }); }
+        function hostLogin() { 
+            let id = document.getElementById('hostId').value; 
+            let pass = document.getElementById('hostPass').value; 
+            // Save username to session storage immediately to use later
+            sessionStorage.setItem('temp_username', id);
+            socket.emit('hostLogin', { id, pass }); 
+        }
+        socket.on('adminLoginSuccess', (users) => { sessionStorage.setItem('role', 'admin'); sessionStorage.setItem('usersData', JSON.stringify(users)); window.location.href = 'admin.html'; });
+        socket.on('hostLoginSuccess', (data) => { 
+            sessionStorage.setItem('role', 'host');
+            // Move temp username to permanent
+            sessionStorage.setItem('username', sessionStorage.getItem('temp_username'));
+            window.location.href = 'index.html'; 
+        });
+        socket.on('loginFailed', (msg) => { if(document.getElementById('adminModal').style.display === 'flex') { document.getElementById('adminError').innerText = msg; document.getElementById('adminError').style.display = 'block'; } else { document.getElementById('hostError').innerText = msg; document.getElementById('hostError').style.display = 'block'; } });
+    </script>
+</body>
+</html>
